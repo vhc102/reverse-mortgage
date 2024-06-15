@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reverse Mortgage Calculator</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        #balanceChart {
+            max-width: 1000px;
+            max-height: 500px;
+            margin-top:1rem;
+        }
+        body{
+        overflow:hidden;
+            font-family: sans-serif;
+            letter-space:2px;
+        }
+    </style>
+    <script>
+        function calculatePrincipalLimit() {
+            const age = parseInt(document.getElementById('age_input').value) || 0;
+            const homeValue = parseFloat(document.getElementById('home_value_input').value) || 0;
+            const margin = parseFloat(document.getElementById('margin_input').value) || 0;
+
+            const principalLimit = homeValue * (0.5 + (age - 62) * 0.01) - (homeValue * (margin / 100));
+            document.getElementById('principal_limit').innerText = `Principal Limit: $${principalLimit.toFixed(2)}`;
+
+            updateChart(principalLimit, age);
+        }
+
+        function updateChart(principalLimit, age) {
+            const years = [];
+            const balances = [];
+            const interestRate = parseFloat(document.getElementById('margin_input').value) / 100;
+
+            for (let i = 0; i <= 30; i++) {
+                years.push(age + i);
+                balances.push(principalLimit * Math.pow(1 + interestRate, i));
+            }
+
+            chart.data.labels = years;
+            chart.data.datasets[0].data = balances;
+            chart.update();
+        }
+
+        function syncAge(value) {
+            document.getElementById('age_input').value = value;
+            document.getElementById('age_slider').value = value;
+            calculatePrincipalLimit();
+        }
+
+        function syncHomeValue(value) {
+            document.getElementById('home_value_input').value = value;
+            document.getElementById('home_value_slider').value = value;
+            calculatePrincipalLimit();
+        }
+
+        function syncMargin(value) {
+            document.getElementById('margin_input').value = value;
+            document.getElementById('margin_slider').value = value;
+            calculatePrincipalLimit();
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            document.getElementById('age_slider').addEventListener('input', (event) => syncAge(event.target.value));
+            document.getElementById('age_input').addEventListener('input', (event) => syncAge(event.target.value));
+            document.getElementById('home_value_slider').addEventListener('input', (event) => syncHomeValue(event.target.value));
+            document.getElementById('home_value_input').addEventListener('input', (event) => syncHomeValue(event.target.value));
+            document.getElementById('margin_slider').addEventListener('input', (event) => syncMargin(event.target.value));
+            document.getElementById('margin_input').addEventListener('input', (event) => syncMargin(event.target.value));
+
+            const ctx = document.getElementById('balanceChart').getContext('2d');
+            window.chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Balance Over Time',
+                        data: [],
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Age'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Balance ($)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            calculatePrincipalLimit();
+        });
+    </script>
+</head>
+<body>
+    <h1 class="text-center py-3">Reverse Mortgage Calculator</h1>
+    <hr />
+    <form method="post">
+        {% csrf_token %}
+        <div class="container my-5">
+            <div class="row justify-content-center d-flex">
+            <div class="col-3 flex-column d-flex">
+                 <label for="age_slider" class="mb-3 text-dark fw-bold">Age: <input class="form-control d-inline" type="number" id="age_input" value="62" style="width: 80px; margin-left:1rem;"></label>
+                <input type="range" id="age_slider" name="age" value="62">
+            </div>
+             <div class="col-3 flex-column d-flex">
+                 <label for="home_value_slider" class="mb-3 text-dark fw-bold">Home Value: $<input class="form-control d-inline" type="number" id="home_value_input" min="10000" max="1000000" step="1000" value="200000" style="width: auto; margin-left:1rem;"></label>
+                <input type="range" id="home_value_slider" name="home_value" min="10000" max="1000000" step="1000" value="200000">
+            </div>
+             <div class="col-3 flex-column d-flex">
+               <label for="margin_slider" class="mb-3 text-dark fw-bold">Margin: <input class="form-control d-inline" type="number" id="margin_input" step="0.1" value="2" style="width: 80px; margin-left:1rem;">%</label>
+                <input type="range" id="margin_slider" name="margin" step="0.1" value="2">
+            </div>
+        </div>
+        </div>
+
+    </form>
+    <p id="principal_limit" class="text-center fs-5 text-black fw-bold text-decoration-underline">Principal Limit: $0.00</p>
+   <div class="row">
+       <div class="col d-flex justify-content-center">
+            <canvas id="balanceChart"></canvas>
+       </div>
+   </div>
+
+</body>
+</html>
